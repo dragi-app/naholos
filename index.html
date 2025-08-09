@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Постав наголос – демо від Драгі</title>
+    <style>
+      /*
+        Базові кольори й шрифти, запозичені зі стилю основного файлу DRAGI.
+        Змінні полегшують модифікацію: достатньо змінити колір тут, щоб це вплинуло на всі елементи.
+      */
+      :root {
+        --grad-start: #ff8a00;
+        --grad-mid: #ff3e90;
+        --grad-end: #7a00ff;
+        --card-bg: #ffffff;
+        --card-shadow: rgba(0, 0, 0, 0.1);
+        --text-primary: #2a0d5d;
+        --text-secondary: #4b2c82;
+        --button-bg: #ff8a00;
+        --button-bg-secondary: #7a00ff;
+        --button-text: #ffffff;
+        --progress-bg: rgba(255, 255, 255, 0.3);
+        --progress-fill: #ffffff;
+        --ok: #2ea44f;
+        --bad: #d73a49;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body,
+      html {
+        height: 100%;
+        width: 100%;
+      }
+body {
+        background: linear-gradient(45deg, var(--grad-start), var(--grad-mid), var(--grad-end));
+        background-size: 400% 400%;
+        animation: gradientShift 15s ease infinite;
+        color: var(--text-primary);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+          Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        /* Використовуємо flex‑контейнер для горизонтального центрування контенту (#app),
+           але вирівнюємо елементи по верхньому краю, щоб сторінка могла нормально прокручуватися.
+           Вертикальне центрування ігрової картки та стартового екрана відбувається всередині
+           відповідних блоків (#game-screen.active, #start-screen.active). */
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        overflow-x: hidden;
+        overflow-y: auto;
+        min-height: 100vh;
+      }
+      @keyframes gradientShift {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+      #app {
+        /*
+          Збільшуємо максимальну ширину контейнера, щоб слово-картка могла бути ширшою
+          й вміщувати довгі слова на одному рядку. При збереженні адаптивності
+          100% ширини на мобільних, застосунок тепер розтягується до 900px на ширших екранах.
+
+          Задаємо мінімальну висоту 100vh, але відмовляємося від flex, щоб не
+          перевизначати вертикальне позиціювання всередині body. Вся вертикальна
+          центровка тепер відбувається через body.
+        */
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        /* Встановлюємо мінімальну висоту на весь екран, щоб внутрішні екрани (game-screen) могли
+           займати повну висоту вікна. Це покращує вертикальне центрування ігрової картки. */
+        min-height: 100vh;
+        display: block;
+      }
+      /* Екрани приховуються за замовчуванням. */
+      .screen {
+        display: none;
+        width: 100%;
+        min-height: 100vh;
+      }
+      .screen.active {
+        display: block;
+      }
+      /* Заголовок гри: логотип, рахунок, таймер та іконка рівня */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 12px;
+        color: #ffffff;
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .header-left img.logo {
+        width: 42px;
+        height: auto;
+        object-fit: contain;
+      }
+      .header-left .score {
+        font-size: 1.0rem;
+        font-weight: 600;
+      }
+      .header-center {
+        flex: 0 0 auto;
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+      .header-right {
+        flex: 0 0 auto;
+      }
+      .header-right img {
+        /* Злегка збільшуємо розмір іконки рівня для кращої видимості */
+        width: 100px;
+        height: auto;
+      }
+
+      /* Великий логотип на стартовому екрані */
+      .logo-large {
+        width: 90px;
+        height: auto;
+        margin-bottom: 1rem;
+      }
+
+      /* Стартовий екран */
+      #start-screen {
+        /* сховано за замовчуванням через клас .screen */
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        color: #ffffff;
+        min-height: 100vh;
+        padding: 20px;
+      }
+      #start-screen.active {
+        display: flex;
+      }
+      #start-screen .start-content {
+        max-width: 480px;
+      }
+      .start-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+      }
+      .start-desc {
+        font-size: 1rem;
+        line-height: 1.4;
+        margin-bottom: 1.5rem;
+      }
+      .start-btn {
+        background: var(--button-bg);
+        color: var(--button-text);
+        padding: 0.8rem 1.8rem;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+        transition: transform 0.2s;
+      }
+      .start-btn:hover {
+        transform: scale(1.05);
+      }
+      .header .level-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+        border: 2px solid rgba(255, 255, 255, 0.6);
+      }
+      .header .level-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .header .timer,
+      .header .score {
+        font-size: 1.0rem;
+        font-weight: 600;
+      }
+      /* Карта слова */
+      #word-card {
+        background: var(--card-bg);
+        border-radius: 20px;
+        box-shadow: 0 8px 20px var(--card-shadow);
+        padding: 1.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        min-height: 220px;
+        position: relative;
+        /*
+          Робимо картку гнучкішою: вона займатиме всю доступну ширину контейнера,
+          але не більше 100% від ширини #app. Це дозволяє довгим словам поміститися
+          на один рядок. Мінімальна ширина залишається, щоб на вузьких екранах
+          картка не була занадто вузька.
+        */
+        width: 100%;
+        max-width: 100%;
+        min-width: 320px;
+        margin: 0 auto;
+      }
+      #word-card .letter {
+        font-size: 2rem;
+        margin: 0.25rem;
+        padding: 0.4rem 0.6rem;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        background: #f9f9f9;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s ease, border-color 0.2s ease;
+        position: relative;
+      }
+      #word-card .letter:hover {
+        background: #f3f3f3;
+      }
+      #word-card .letter.correct {
+        background: rgba(46, 164, 79, 0.15);
+        border-color: var(--ok);
+      }
+      #word-card .letter.wrong {
+        background: rgba(215, 58, 73, 0.15);
+        border-color: var(--bad);
+      }
+      /* Наголос відображається через псевдоелемент */
+      #word-card .letter.accent::after {
+        content: "́";
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 1.5rem;
+        color: var(--text-primary);
+      }
+      /* Банер з підказкою / промо */
+      #promo-banner {
+        display: none;
+        margin-top: 12px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        border: 1px dashed rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+        font-size: 0.9rem;
+        text-align: center;
+      }
+      /* Полоса прогресу для часу */
+      .progress-container {
+        width: 100%;
+        height: 6px;
+        background: var(--progress-bg);
+        border-radius: 3px;
+        margin-top: 16px;
+        overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%;
+        width: 0;
+        background: var(--progress-fill);
+        transition: width 1s linear;
+      }
+
+      /* Макет ігрового екрану: header зверху, решта контенту — по центру */
+      /* Базовий стан гри ховається (успадковується від .screen) */
+      #game-screen {
+        /* жодного display тут, щоб використовувався стандартний від .screen */
+      }
+      #game-screen.active {
+        /* Відображаємо ігровий екран як flex-колонку.
+           Встановлюємо висоту, що дорівнює висоті видимого вікна мінус відступи контейнера #app (20px зверху і 20px знизу).
+           Так ми зберігаємо вертикальне центрування картки навіть при наявності зовнішніх відступів. */
+        position: relative;
+        height: calc(100vh - 40px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .game-content {
+        /*
+          Контейнер для картки та рядка статистики. Просто займає всю доступну
+          ширину й не впливає на позиціювання — центрування забезпечує #game-screen.
+        */
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        /* Дозволяємо блоку рости по всій висоті та центруємо його по вертикалі */
+        flex-grow: 1;
+        height: 100%;
+        justify-content: center;
+        padding-top: 0;
+      }
+
+      /* Обгортка для картки: групуємо рядок статистики та саму картку */
+      .card-wrapper {
+        width: 100%;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        /* Позиція за замовчуванням: батьківський flex‑контейнер центрює цей блок */
+        position: static;
+        /* Тестовий верхній відступ для перевірки центрування */
+        /*margin-top: 100px;*/
+      }
+      /* Рядок статистики всередині обгортки: займає всю ширину картки і відступає вниз */
+      .card-wrapper .header {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 0 8px;
+        position: static;
+      }
+      /* Екран результату */
+      #result-screen {
+        color: #ffffff;
+        text-align: center;
+        padding-top: 20vh;
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+      #result-screen h2 {
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+        color: #ffffff;
+      }
+      #result-screen p {
+        font-size: 1rem;
+        margin-bottom: 0.8rem;
+        line-height: 1.4;
+        color: #f5e8ff;
+      }
+      .cta {
+        margin-top: 1.5rem;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 1rem;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        color: #ffffff;
+      }
+      .cta h3 {
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+        color: #ffffff;
+      }
+      .cta p {
+        font-size: 0.9rem;
+        color: #f5e8ff;
+        margin-bottom: 0.6rem;
+      }
+      .cta p strong {
+        font-weight: 700;
+      }
+      .cta img.cta-img {
+        width: 100%;
+        /* збільшуємо заокруглення кутів для зображення у CTA ще більше, щоб надати м'якший вигляд */
+        border-radius: 80px;
+        margin-top: 0.5rem;
+      }
+      .store-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+      .store-buttons a {
+        flex: 1;
+        text-decoration: none;
+        padding: 0.6rem 0.8rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-align: center;
+        display: inline-block;
+        transition: opacity 0.2s ease;
+        color: var(--button-text);
+      }
+      .store-buttons a.ios {
+        background: var(--button-bg);
+      }
+      .store-buttons a.android {
+        background: var(--button-bg-secondary);
+      }
+      .store-buttons a:hover {
+        opacity: 0.85;
+      }
+      .retry-btn {
+        background: var(--button-bg-secondary);
+        color: var(--button-text);
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 12px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+        transition: transform 0.2s;
+        margin-top: 1rem;
+      }
+      .retry-btn:hover {
+        transform: scale(1.05);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Стартовий екран -->
+      <div id="start-screen" class="screen active">
+        <div class="start-content">
+          <img class="logo-large" src="https://i.postimg.cc/9f92vKsn/with-book.png" alt="Драгі" />
+          <h1 class="start-title">Постав наголос</h1>
+          <p class="start-desc">Клікай на букву, на яку падає наголос. Збери серію правильних відповідей, щоб піднятися на вищий рівень. У тебе є лише одна хвилина!</p>
+          <button id="start-btn" class="start-btn">Почати</button>
+        </div>
+      </div>
+      <!-- Головний екран гри -->
+      <div id="game-screen" class="screen">
+        <!-- Контейнер для вирівнювання картки по центру -->
+        <div class="game-content">
+          <!-- Обгортка для картки та заголовку, щоб розмістити статистику над правим і лівим краєм картки -->
+          <div class="card-wrapper">
+            <!-- Рядок зі статистикою, таймером та іконкою рівня -->
+            <div class="header">
+              <!-- Ліва частина: логотип та рахунок -->
+              <div class="header-left">
+                <img class="logo" src="https://i.postimg.cc/9f92vKsn/with-book.png" alt="Драгі" />
+                <span class="score" id="score-display">0/0</span>
+              </div>
+              <!-- Центр: таймер -->
+              <div class="header-center">
+                <span class="timer" id="timer-display">01:00</span>
+              </div>
+              <!-- Праворуч: іконка рівня -->
+              <div class="header-right">
+                <img id="level-icon-img" src="" alt="рівень" />
+              </div>
+            </div>
+            <!-- Картка слова -->
+            <div id="word-card"></div>
+            <!-- Банер з підказкою/промо -->
+            <div id="promo-banner">Хочеш пройти весь список наголосів у форматі НМТ? Відкрий повний тренажер у застосунку Драгі😇</div>
+            <!-- Прогрес-бар часу -->
+            <div class="progress-container">
+              <div class="progress-bar" id="time-bar"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Екран результатів -->
+      <div id="result-screen" class="screen">
+        <h2 id="result-title"></h2>
+        <p id="result-text"></p>
+        <button class="retry-btn" id="retry-btn">Спробувати ще раз</button>
+        <div class="cta">
+          <h3>Тренуйся далі👇</h3>
+          <p>
+            Тренуй всі 296 наголосів та всі інші теми в форматі НМТ у застосунку Драгі.📲<br />
+            Також переглядай відео‑урок про наголоси з ексклюзивними лайфхаками, які ніде не знайдеш👀
+          </p>
+          <!-- Додатковий акцент на завантаження застосунку -->
+          <p><strong>Завантажуй застосунок👇</strong></p>
+          <img class="cta-img" src="https://i.postimg.cc/c4CVpPnB/scnjhs.jpg" alt="Драгі чекає на тебе" />
+          <div class="store-buttons">
+            <a class="ios" href="https://apps.apple.com/ua/app/%D0%B4%D1%80%D0%B0%D0%B3%D1%96-%D0%BF%D1%96%D0%B4%D0%B3%D0%BE%D1%82%D0%BE%D0%B2%D0%BA%D0%B0-%D0%B4%D0%BE-%D0%BD%D0%BC%D1%82-%D0%B7%D0%BD%D0%BE/id6502047535" target="_blank" rel="noopener">App Store</a>
+            <a class="android" href="https://play.google.com/store/apps/details?id=ua.dragi.education" target="_blank" rel="noopener">Google Play</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      /**
+       * Дані: слова розбиті за рівнями складності.
+       * Кожне слово містить наголос (вказаний великою літерою всередині).
+       */
+      const rawLevels = [
+        // Легкий (24 слів)
+        [
+          "Аркушик",
+          "багаторазОвий",
+          "бЕшкет",
+          "близькИй",
+          "болотИстий",
+          "вАги (у множині)",
+          "відвезтИ",
+          "відвестИ",
+          "вІдгомін",
+          "віднестИ",
+          "віршовИй",
+          "глядАч",
+          "децимЕтр",
+          "де-Юре",
+          "джерелО",
+          "дИвлячись",
+          "довезтИ",
+          "довестИ",
+          "донестИ",
+          "експЕрт",
+          "завдАння",
+          "завезтИ",
+          "завестИ",
+          "зАвжди",
+        ],
+        // Середній (перші 12 слів із другої групи)
+        [
+          "борОдавка",
+          "бюлетЕнь",
+          "алфАвІт",
+          "бурштинОвий",
+          "вантажІвка",
+          "вимОга",
+          "вИпадок",
+          "вирАзний",
+          "горошИна",
+          "гальмО",
+          "гАльма",
+          "дичАвіти",
+          "залишИти",
+        ],
+        // Складний (наступні 12)
+        [
+          "заробІток",
+          "зобразИти",
+          "зОзла",
+          "зрАння",
+          "кАмбала",
+          "каталОг",
+          "квартАл",
+          "кіломЕтр",
+          "кОлесо",
+          "кОлія",
+          "корИсний",
+          "лАте",
+        ],
+        // Дуже складний (наступні 12)
+        [
+          "листопАд",
+          "літОпис",
+          "мАбУть",
+          "мАркетинг",
+          "мерЕжа",
+          "мілімЕтр",
+          "навчАння",
+          "ненАвидіти",
+          "ненАвисний",
+          "ненАвисть",
+          "нестИ",
+          "новИй",
+        ],
+        // Просунутий (останні 13)
+        [
+          "обіцЯнка",
+          "одинАдцять",
+          "перевезтИ",
+          "перевестИ",
+          "понЯття",
+          "привезтИ",
+          "привестИ",
+          "псевдонІм",
+          "рАзом",
+          "рукОпис",
+          "тризУб",
+          "тУлуб",
+          "украЇнський",
+        ],
+      ];
+
+      /*
+       * Іконки для рівнів. За бажанням можна змінити порядок
+       * відповідно до вашого дизайну.
+       */
+      const levelIcons = [
+        "https://i.postimg.cc/63x6Htb3/1.png", // легкий
+        "https://i.postimg.cc/6q9WXzXx/1.png", // середній
+        "https://i.postimg.cc/HnBps5Yc/1.png", // складний
+        "https://i.postimg.cc/4Nxf28Pz/1.png", // дуже складний
+        "https://i.postimg.cc/hPZSk9ZN/1.png", // просунутий
+      ];
+
+      // Стан гри
+      let currentLevel = 0; // індекс рівня (0-4)
+      let levelCorrect = [0, 0, 0, 0, 0]; // кількість правильних відповідей для кожного рівня
+      let consecutiveWrong = 0; // кількість неправильних відповідей поспіль
+      let correctTotal = 0; // загальна кількість правильних
+      let attemptTotal = 0; // загальна кількість спроб
+      let isAnswered = false; // щоб уникнути подвійних кліків
+      // Загальна тривалість гри у секундах (1 хвилина)
+      const TOTAL_TIME = 60;
+      let timeLeft = TOTAL_TIME; // 1 хвилина = 60 секунд
+      let timerInterval = null;
+      let showPromoOnce = false;
+
+      // Підготовка слів: видаляємо всі службові символи та визначаємо наголос.
+      function prepareWord(raw) {
+        // Видаляємо частину в дужках (наприклад, "(у множині)")
+        let cleaned = raw.replace(/\(.*?\)/g, "");
+        // Видаляємо дефіси, апострофи та пробіли
+        cleaned = cleaned.replace(/[-\s']/g, "");
+        // Пошук індексів великих літер (наголосів)
+        const accentPositions = [];
+        const letters = [];
+        for (let i = 0; i < cleaned.length; i++) {
+          const ch = cleaned[i];
+          // тільки українські/латинські літери
+          if (/[A-Za-zА-Яа-яІіЇїЄєҐґ]/.test(ch)) {
+            if (ch === ch.toUpperCase() && ch !== ch.toLowerCase()) {
+              accentPositions.push(letters.length);
+              letters.push(ch.toLowerCase());
+            } else {
+              letters.push(ch.toLowerCase());
+            }
+          }
+        }
+        let accentIndex = 0;
+        if (accentPositions.length > 0) {
+          // беремо останню велику літеру як наголос
+          accentIndex = accentPositions[accentPositions.length - 1];
+        }
+        return {
+          text: letters,
+          accent: accentIndex,
+        };
+      }
+
+      // Підготовка усіх слів для кожного рівня
+      const levels = rawLevels.map((arr) => arr.map((w) => prepareWord(w)));
+
+      // Поточні індекси для кожного рівня (щоб проходити слова по колу)
+      const levelIndices = [0, 0, 0, 0, 0];
+
+      // DOM елементи
+      const levelIconEl = document.getElementById("level-icon-img");
+      const timerEl = document.getElementById("timer-display");
+      const scoreEl = document.getElementById("score-display");
+      const wordCard = document.getElementById("word-card");
+      const promoBanner = document.getElementById("promo-banner");
+      const progressBar = document.getElementById("time-bar");
+      const resultScreenEl = document.getElementById("result-screen");
+      const gameScreenEl = document.getElementById("game-screen");
+      const resultTitleEl = document.getElementById("result-title");
+      const resultTextEl = document.getElementById("result-text");
+      const retryBtnEl = document.getElementById("retry-btn");
+
+
+      // Оновлює інформацію в заголовку
+      function updateHeader() {
+        levelIconEl.src = levelIcons[currentLevel];
+        // оновлення таймера
+        var minutes = Math.floor(timeLeft / 60);
+        var seconds = timeLeft % 60;
+        // Форматуємо час без використання padStart для сумісності зі старішими браузерами
+        var mm = minutes < 10 ? '0' + minutes : String(minutes);
+        var ss = seconds < 10 ? '0' + seconds : String(seconds);
+        timerEl.textContent = mm + ':' + ss;
+        // оновлення рахунку без шаблонних рядків
+        scoreEl.textContent = correctTotal + '/' + attemptTotal;
+        // прогрес бар
+        const percent = ((TOTAL_TIME - timeLeft) / TOTAL_TIME) * 100;
+        progressBar.style.width = percent + "%";
+      }
+
+      // Вибір наступного слова на основі поточного рівня
+      function getNextWord() {
+        const arr = levels[currentLevel];
+        // Якщо поточний індекс перевищує довжину, починаємо знову
+        if (levelIndices[currentLevel] >= arr.length) {
+          levelIndices[currentLevel] = 0;
+        }
+        const word = arr[levelIndices[currentLevel]];
+        levelIndices[currentLevel]++;
+        return word;
+      }
+
+      // Відображення слова на екрані
+      function displayWord(wordObj) {
+        wordCard.innerHTML = "";
+        isAnswered = false;
+        wordObj.text.forEach((ch, idx) => {
+          const btn = document.createElement("div");
+          btn.className = "letter";
+          btn.textContent = ch;
+          btn.addEventListener("click", () => handleAnswer(idx, btn, wordObj.accent));
+          wordCard.appendChild(btn);
+        });
+
+      }
+
+      // Обробка відповіді користувача
+      function handleAnswer(idx, btn, accentIdx) {
+        if (isAnswered) return;
+        isAnswered = true;
+        attemptTotal++;
+        // показати промо після кількох правильних відповідей
+        if (!showPromoOnce && correctTotal >= 2) {
+          showPromoOnce = true;
+          promoBanner.style.display = "block";
+        }
+        if (idx === accentIdx) {
+          // правильна відповідь
+          correctTotal++;
+          levelCorrect[currentLevel]++;
+          consecutiveWrong = 0;
+          btn.classList.add("correct", "accent");
+        } else {
+          // неправильна відповідь
+          consecutiveWrong++;
+          levelCorrect[currentLevel] = Math.max(levelCorrect[currentLevel] - 1, 0);
+          btn.classList.add("wrong");
+        }
+        // підсвічуємо правильний наголос
+        const letters = wordCard.children;
+        for (let i = 0; i < letters.length; i++) {
+          if (i === accentIdx) {
+            letters[i].classList.add("correct", "accent");
+          }
+        }
+        updateHeader();
+        // затримка перед наступним словом
+        setTimeout(() => {
+          updateLevel();
+          if (timeLeft > 0) {
+            const nextWord = getNextWord();
+            displayWord(nextWord);
+          }
+        }, 650);
+      }
+
+      // Оновлення рівня на підставі правильних і неправильних відповідей
+      function updateLevel() {
+        // підвищення рівня
+        if (currentLevel === 0 && levelCorrect[0] >= 2) {
+          currentLevel = 1;
+        } else if (currentLevel === 1 && levelCorrect[1] >= 5) {
+          currentLevel = 2;
+        } else if (currentLevel === 2 && levelCorrect[2] >= 5) {
+          currentLevel = 3;
+        } else if (currentLevel === 3 && levelCorrect[3] >= 5) {
+          currentLevel = 4;
+        }
+        // пониження рівня при двох помилках підряд
+        if (consecutiveWrong >= 2 && currentLevel > 0) {
+          currentLevel--;
+          consecutiveWrong = 0;
+        }
+      }
+
+      // Запуск таймера
+      function startTimer() {
+        timerInterval = setInterval(() => {
+          timeLeft--;
+          updateHeader();
+          if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            finishGame();
+          }
+        }, 1000);
+      }
+
+      // Почати гру
+      function startGame() {
+        // Скидаємо стани
+        currentLevel = 0;
+        levelCorrect = [0, 0, 0, 0, 0];
+        consecutiveWrong = 0;
+        correctTotal = 0;
+        attemptTotal = 0;
+        showPromoOnce = false;
+        promoBanner.style.display = "none";
+        timeLeft = TOTAL_TIME;
+        // скинути індекси
+        for (let i = 0; i < levelIndices.length; i++) {
+          levelIndices[i] = 0;
+        }
+        updateHeader();
+        // показати ігровий екран
+        document.getElementById("start-screen").classList.remove("active");
+        gameScreenEl.classList.add("active");
+        resultScreenEl.classList.remove("active");
+        clearInterval(timerInterval);
+        startTimer();
+        // показати перше слово
+        const firstWord = getNextWord();
+        displayWord(firstWord);
+      }
+
+      // Завершити гру й показати результат
+      function finishGame() {
+        // Показуємо екран результату
+        gameScreenEl.classList.remove("active");
+        document.getElementById("start-screen").classList.remove("active");
+        resultScreenEl.classList.add("active");
+        resultTitleEl.textContent = "Гру завершено!";
+        // Використовуємо конкатенацію рядків для кращої сумісності
+        resultTextEl.textContent = 'Ти набрав(ла) – ' + correctTotal + '/' + attemptTotal + ' правильних наголосів.';
+      }
+
+      // Обробка кнопки повтору
+      retryBtnEl.addEventListener("click", () => {
+        startGame();
+      });
+      // Подія запуску гри зі стартового екрану
+      const startBtnEl = document.getElementById("start-btn");
+      if (startBtnEl) {
+        startBtnEl.addEventListener("click", () => {
+          startGame();
+        });
+      }
+    </script>
+  </body>
+</html>
